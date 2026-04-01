@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
-import { CheckCircle, XCircle, Printer, Clock, Truck, MessageSquare } from 'lucide-react';
+import { CheckCircle, XCircle, Printer, Clock, Truck, MessageSquare, Timer as TimerIcon } from 'lucide-react';
 import usePedidos from '../../hooks/usePedidos';
 import useSound from '../../hooks/useSound';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
+import Timer from '../ui/Timer'; // Importar el nuevo componente
 import { formatCurrency } from '../../lib/config';
 import { printThermalReceipt } from '../../lib/thermalPrint';
 
@@ -99,17 +100,22 @@ const PedidosTab = ({ api }) => {
       </div>
 
       <div className="space-y-4 pt-4 border-t border-slate-800">
-        <h2 className="text-lg font-bold text-slate-400 px-2 tracking-tight">Últimos 10 Confirmados</h2>
+        <h2 className="text-lg font-bold text-slate-400 px-2 tracking-tight">En Espera de Despacho</h2>
         <div className="grid grid-cols-1 gap-3">
           {history.map(h => (
-            <Card key={`hist-${h.id}`} className="cursor-pointer active:scale-[0.98] transition-transform p-4 border-slate-800" >
+            <Card key={`hist-${h.id}`} className={`cursor-pointer active:scale-[0.98] transition-transform p-4 border-slate-800 ${h.order_status !== 'Despachado' ? 'bg-slate-900/50' : ''}`} >
               <div onClick={() => setSelected({ ...h, isNew: false })}>
                 <div className="flex justify-between items-center mb-2">
                   <h4 className="font-bold text-slate-300">{h.customer_name}</h4>
-                  <span className="font-bold text-slate-300">{formatCurrency(h.total_amount)}</span>
+                  {h.order_status !== 'Despachado' && (
+                    <div className="flex items-center gap-1.5 text-xs bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                      <TimerIcon size={12} className="text-slate-500" />
+                      <Timer startTime={h.created_at} />
+                    </div>
+                  )}
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-slate-500">{new Date(h.created_at).toLocaleString('es-CO')}</span>
+                  <span className="text-xs text-slate-500">{new Date(h.created_at).toLocaleTimeString('es-CO')}</span>
                   <Badge color={h.order_status === 'Despachado' ? 'green' : 'gray'}>{h.order_status}</Badge>
                 </div>
               </div>
@@ -122,7 +128,15 @@ const PedidosTab = ({ api }) => {
         <Modal title={`Orden #${String(selected.id).slice(0,8)}`} onClose={() => setSelected(null)}>
           <div className="space-y-4 mb-6">
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-              <p className="text-slate-400 text-sm">Cliente: <span className="text-amber-500 font-bold text-lg">{selected.customer_name}</span></p>
+              <div className="flex justify-between items-start">
+                <p className="text-slate-400 text-sm">Cliente: <span className="text-amber-500 font-bold text-lg">{selected.customer_name}</span></p>
+                {!selected.isNew && selected.order_status !== 'Despachado' && (
+                   <div className="text-right">
+                     <p className="text-[10px] text-slate-500 uppercase font-bold">Tiempo en espera</p>
+                     <div className="text-sm"><Timer startTime={selected.created_at} /></div>
+                   </div>
+                )}
+              </div>
               <p className="text-slate-400 text-sm">Teléfono: <span className="text-white font-bold">{selected.phone || 'N/A'}</span></p>
               <p className="text-slate-400 text-sm">Dirección: <span className="text-white font-bold">{selected.customer_address}</span></p>
               
