@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, ShoppingBag, Package, BarChart3, Utensils } from 'lucide-react';
+import { LogOut, ShoppingBag, Package, BarChart3 } from 'lucide-react';
 import useApi from './hooks/useApi';
 import { CONFIG, API_URLS } from './lib/config';
 import LoginView from './views/LoginView';
@@ -55,8 +55,8 @@ export default function App() {
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans pb-20">
       <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 p-4 flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <div className="bg-amber-500 p-2 rounded-lg text-slate-900"><Utensils size={20}/></div>
-          <span className="font-bold text-xl text-white tracking-tight">T! Traigo</span>
+          <img src="/favicon.png" alt="Logo" className="w-10 h-10 object-contain" />
+          <span className="font-bold text-xl text-white tracking-tight">Panel Comidas</span>
         </div>
         <button onClick={logout} className="p-2 text-slate-400 hover:text-amber-500 bg-slate-800 rounded-lg">
           <LogOut size={20}/>

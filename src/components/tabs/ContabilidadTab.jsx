@@ -27,8 +27,18 @@ const ContabilidadTab = ({ api }) => {
 
   const applyFilter = (orders, timeRange) => {
     const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
+    const getCommercialStart = (date) => {
+      const d = new Date(date);
+      if (d.getHours() < 6) {
+        d.setDate(d.getDate() - 1);
+      }
+      d.setHours(6, 0, 0, 0);
+      return d;
+    };
+
+    const startOfToday = getCommercialStart(now);
+
     const filtered = orders.filter(o => {
       const orderDate = new Date(o.created_at);
       
@@ -37,15 +47,17 @@ const ContabilidadTab = ({ api }) => {
       }
       
       if (timeRange === 'Semana') {
-        const lastWeek = new Date();
-        lastWeek.setDate(now.getDate() - 7);
-        return orderDate >= lastWeek;
+        const startOfWeek = new Date(startOfToday);
+        const day = startOfWeek.getDay();
+        const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); 
+        startOfWeek.setDate(diff);
+        startOfWeek.setHours(6, 0, 0, 0);
+        return orderDate >= startOfWeek;
       }
       
       if (timeRange === 'Mes') {
-        const lastMonth = new Date();
-        lastMonth.setMonth(now.getMonth() - 1);
-        return orderDate >= lastMonth;
+        const startOfMonth = new Date(startOfToday.getFullYear(), startOfToday.getMonth(), 1, 6, 0, 0, 0);
+        return orderDate >= startOfMonth;
       }
       
       return true;

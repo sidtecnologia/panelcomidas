@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Utensils, XCircle, Eye, EyeOff } from 'lucide-react';
+import { XCircle, Eye, EyeOff } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 
@@ -12,8 +12,8 @@ const LoginView = ({ onLogin, loading, error }) => {
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
       <Card className="w-full max-w-sm shadow-2xl border-slate-800 bg-slate-900">
         <div className="text-center mb-8">
-          <div className="bg-amber-500/10 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
-            <Utensils className="text-amber-500" size={40}/>
+          <div className="w-24 h-24 flex items-center justify-center mx-auto mb-4">
+            <img src="/favicon.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight">T! Traigo</h1>
           <p className="text-slate-400 mt-2 text-sm">Panel Administrativo</p>
