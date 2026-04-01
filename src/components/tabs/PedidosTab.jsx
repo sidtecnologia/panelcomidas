@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { CheckCircle, XCircle, Printer, Clock, Truck } from 'lucide-react';
+import { CheckCircle, XCircle, Printer, Clock, Truck, MessageSquare } from 'lucide-react';
 import usePedidos from '../../hooks/usePedidos';
 import useSound from '../../hooks/useSound';
 import Card from '../ui/Card';
@@ -64,7 +64,7 @@ const PedidosTab = ({ api }) => {
       customerAddress: order.customer_address,
       items: parseItems(order),
       total: order.total_amount,
-      note: order.notes || order.observation
+      note: order.observation || order.notes
     });
   };
 
@@ -121,11 +121,22 @@ const PedidosTab = ({ api }) => {
       {selected && (
         <Modal title={`Orden #${String(selected.id).slice(0,8)}`} onClose={() => setSelected(null)}>
           <div className="space-y-4 mb-6">
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
               <p className="text-slate-400 text-sm">Cliente: <span className="text-amber-500 font-bold text-lg">{selected.customer_name}</span></p>
               <p className="text-slate-400 text-sm">Teléfono: <span className="text-white font-bold">{selected.phone || 'N/A'}</span></p>
               <p className="text-slate-400 text-sm">Dirección: <span className="text-white font-bold">{selected.customer_address}</span></p>
+              
+              {selected.observation && (
+                <div className="mt-3 pt-3 border-t border-slate-900 flex gap-2">
+                  <MessageSquare size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase">Observaciones:</p>
+                    <p className="text-sm text-slate-200 italic">"{selected.observation}"</p>
+                  </div>
+                </div>
+              )}
             </div>
+
             <ul className="divide-y divide-slate-800 bg-slate-950 rounded-xl border border-slate-800 px-4">
               {parseItems(selected).map((item, i) => (
                 <li key={i} className="flex justify-between py-3 text-sm">
@@ -134,6 +145,7 @@ const PedidosTab = ({ api }) => {
                 </li>
               ))}
             </ul>
+
             <div className="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
               <span className="text-slate-400 font-bold text-sm">TOTAL</span>
               <span className="text-amber-500 font-bold text-2xl">{formatCurrency(selected.total_amount)}</span>
