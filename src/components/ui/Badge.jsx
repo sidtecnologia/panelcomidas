@@ -1,11 +1,10 @@
 const Badge = ({ children, color = 'gray' }) => {
   const styles = {
-    gray: 'bg-slate-100 text-slate-700',
-    green: 'bg-emerald-100 text-emerald-700',
-    red: 'bg-red-100 text-red-700',
-    yellow: 'bg-amber-100 text-amber-700'
+    gray: 'bg-slate-800 text-slate-300 border-slate-700',
+    green: 'bg-emerald-950 text-emerald-400 border-emerald-900',
+    red: 'bg-red-950 text-red-400 border-red-900',
+    yellow: 'bg-amber-950 text-amber-500 border-amber-900/50'
   };
-  return <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${styles[color] || styles.gray}`}>{children}</span>;
+  return <span className={`px-3 py-1 rounded-lg border text-xs font-bold uppercase tracking-wider ${styles[color] || styles.gray}`}>{children}</span>;
 };
-
 export default Badge;

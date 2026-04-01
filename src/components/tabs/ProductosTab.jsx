@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Search, Plus, Edit, Trash2 } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Box } from 'lucide-react';
 import useProductos from '../../hooks/useProductos';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -18,8 +18,6 @@ const ProductosTab = ({ api, token }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-
-    // Obtener archivos directamente del input (para soportar multiple)
     const fileInput = fileInputRef.current;
     const files = fileInput?.files && fileInput.files.length > 0 ? fileInput.files : null;
 
@@ -30,11 +28,9 @@ const ProductosTab = ({ api, token }) => {
       stock: Number(fd.get('stock')),
       category: fd.get('category'),
       description: fd.get('description'),
-      // Checkboxes: featured, isOffer, bestSeller -> están presentes si checked -> 'on'
       featured: !!fd.get('featured'),
       isOffer: !!fd.get('isOffer'),
       bestSeller: !!fd.get('bestSeller'),
-      // Si no se suben nuevas imágenes, useProductos se encarga de mantener las existentes
       image: editing?.image
     };
 
@@ -46,78 +42,61 @@ const ProductosTab = ({ api, token }) => {
   const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <Card>
-      <div className="flex justify-between mb-6 gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <input className="w-full pl-10 pr-4 py-2 border rounded-lg" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
+    <div className="space-y-4">
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+          <input className="w-full pl-12 pr-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:border-amber-500 outline-none transition-all" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <Button icon={Plus} onClick={() => { setEditing({ featured: false, isOffer: false, bestSeller: false, image: [] }); setModalOpen(true); }}>Nuevo</Button>
+        <Button onClick={() => { setEditing({ featured: false, isOffer: false, bestSeller: false, image: [] }); setModalOpen(true); }} className="aspect-square p-0 w-12 h-12">
+          <Plus size={24} />
+        </Button>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-slate-500"><tr><th className="p-3">Imgs</th><th className="p-3">Nombre</th><th className="p-3">Precio</th><th className="p-3">Stock</th><th className="p-3">Flags</th><th className="p-3 text-right">Acciones</th></tr></thead>
-          <tbody className="divide-y divide-slate-50">
-            {filtered.map(p => (
-              <tr key={p.id} className="hover:bg-slate-50">
-                <td className="p-3">
-                  <div className="flex gap-1">
-                    {(p.image || []).slice(0,3).map((src, idx) => (
-                      <img key={idx} src={src || CONFIG.DEFAULT_IMG} className="w-10 h-10 rounded bg-slate-100 object-cover"/>
-                    ))}
-                    {(p.image || []).length === 0 && <img src={CONFIG.DEFAULT_IMG} className="w-10 h-10 rounded bg-slate-100 object-cover"/>}
+
+      <div className="grid grid-cols-1 gap-4">
+        {filtered.map(p => (
+          <Card key={p.id} className="p-3">
+            <div className="flex gap-4 items-center">
+              <img src={p.image?.[0] || CONFIG.DEFAULT_IMG} className="w-20 h-20 rounded-xl object-cover bg-slate-800 border border-slate-700" />
+              <div className="flex-1 min-w-0">
+                <h4 className="font-bold text-white truncate text-lg">{p.name}</h4>
+                <p className="text-amber-500 font-bold">{formatCurrency(p.price)}</p>
+                <div className="flex flex-col gap-1 mt-1 text-xs font-bold uppercase tracking-wider">
+                  <span className="text-slate-500 truncate">{p.category}</span>
+                  <div className="flex items-center gap-1">
+                    <Box size={14} className={p.stock > 0 ? 'text-emerald-500' : 'text-red-500'} />
+                    <span className={p.stock > 0 ? 'text-slate-400' : 'text-red-500'}>Stock: {p.stock}</span>
                   </div>
-                </td>
-                <td className="p-3 font-medium">{p.name}</td>
-                <td className="p-3">{formatCurrency(p.price)}</td>
-                <td className={`p-3 font-bold ${p.stock>0?'text-emerald-600':'text-red-500'}`}>{p.stock}</td>
-                <td className="p-3">
-                  <div className="flex gap-2 text-xs">
-                    {p.featured && <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700">Destacado</span>}
-                    {p.isOffer && <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-700">Oferta</span>}
-                    {p.bestSeller && <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">Más Vendido</span>}
-                  </div>
-                </td>
-                <td className="p-3 text-right space-x-2">
-                  <button onClick={() => { setEditing(p); setModalOpen(true); }} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded"><Edit size={16}/></button>
-                  <button onClick={() => remove(p.id)} className="text-red-500 hover:bg-red-50 p-2 rounded"><Trash2 size={16}/></button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <button onClick={() => { setEditing(p); setModalOpen(true); }} className="p-3 bg-slate-800 rounded-xl text-amber-500 hover:bg-slate-700"><Edit size={20}/></button>
+                <button onClick={() => remove(p.id)} className="p-3 bg-red-950 rounded-xl text-red-500 hover:bg-red-900"><Trash2 size={20}/></button>
+              </div>
+            </div>
+          </Card>
+        ))}
       </div>
 
       {isModalOpen && (
         <Modal title={editing?.id ? 'Editar Producto' : 'Nuevo Producto'} onClose={() => { setModalOpen(false); setEditing(null); }}>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <input name="name" defaultValue={editing?.name} placeholder="Nombre" required className="w-full border rounded p-2"/>
-            <div className="flex gap-4">
-              <input name="price" type="number" defaultValue={editing?.price} placeholder="Precio" required className="w-full border rounded p-2"/>
-              <input name="stock" type="number" defaultValue={editing?.stock} placeholder="Stock" required className="w-full border rounded p-2"/>
+            <input name="name" defaultValue={editing?.name} placeholder="Nombre del producto" required className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-amber-500 outline-none"/>
+            <input name="category" defaultValue={editing?.category} placeholder="Categoría" required className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-amber-500 outline-none"/>
+            <div className="grid grid-cols-2 gap-3">
+              <input name="price" type="number" defaultValue={editing?.price} placeholder="Precio" required className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-amber-500 outline-none"/>
+              <input name="stock" type="number" defaultValue={editing?.stock} placeholder="Stock" required className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-amber-500 outline-none"/>
             </div>
-            <input name="category" defaultValue={editing?.category} placeholder="Categoría" className="w-full border rounded p-2"/>
-            <textarea name="description" defaultValue={editing?.description} placeholder="Descripción" className="w-full border rounded p-2 h-20"/>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="featured" defaultChecked={!!editing?.featured}/> Destacado</label>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="isOffer" defaultChecked={!!editing?.isOffer}/> Oferta</label>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="bestSeller" defaultChecked={!!editing?.bestSeller}/> Más vendido</label>
+            <textarea name="description" defaultValue={editing?.description} placeholder="Descripción breve" className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-amber-500 outline-none h-24"/>
+            <div className="space-y-2 p-4 bg-slate-950 rounded-xl border border-slate-800">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Subir Imágenes</label>
+              <input ref={fileInputRef} type="file" name="imageFiles" multiple accept="image/*" className="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-slate-800 file:text-amber-500 hover:file:bg-slate-700"/>
             </div>
-
-            <div>
-              <label className="text-sm text-slate-600 mb-1 block">Imágenes (puedes subir varias)</label>
-              <input ref={fileInputRef} type="file" name="imageFiles" multiple accept="image/*" className="w-full text-sm text-slate-500"/>
-              <div className="text-xs text-slate-400 mt-1">Sube una o más imágenes. Las nuevas imágenes se agregarán a las existentes.</div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="secondary" onClick={() => { setModalOpen(false); setEditing(null); }}>Cancelar</Button>
-              <Button type="submit">Guardar</Button>
-            </div>
+            <Button type="submit" className="w-full py-4 mt-4 text-lg">Guardar Producto</Button>
           </form>
         </Modal>
       )}
-    </Card>
+    </div>
   );
 };
 

@@ -10,10 +10,7 @@ const useProductos = (api) => {
   }, [api]);
 
   const save = async (productData, files, token) => {
-    // Copiar imágenes existentes (si hay)
     let imageUrls = Array.isArray(productData.image) ? [...productData.image] : (productData.image ? [...productData.image] : []);
-
-    // Manejar subida de múltiples archivos (files puede ser FileList o Array)
     const fileArray = files && (files instanceof FileList ? Array.from(files) : Array.isArray(files) ? files : null);
 
     if (fileArray && fileArray.length > 0) {
@@ -27,21 +24,14 @@ const useProductos = (api) => {
           });
           if (uploadRes.ok) {
             imageUrls.push(`${API_URLS.STORAGE}/${filePath}`);
-          } else {
-            console.warn('Error subiendo archivo', file.name, await uploadRes.text());
           }
         } catch (err) {
-          console.error('Error subiendo archivo', file.name, err);
+          console.error(err);
         }
       }
     }
 
-    const payload = {
-      ...productData,
-      image: imageUrls
-    };
-
-    // No enviar id en payload para inserción; para actualización usamos PATCH con filtro
+    const payload = { ...productData, image: imageUrls };
     const id = payload.id;
     if (id) delete payload.id;
 
@@ -50,7 +40,6 @@ const useProductos = (api) => {
     } else {
       await api.request('/products', { method: 'POST', body: JSON.stringify(payload) });
     }
-
     await load();
   };
 

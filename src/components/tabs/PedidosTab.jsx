@@ -1,190 +1,156 @@
-import { useEffect, useState } from 'react';
-import { CheckCircle, XCircle, Printer } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { CheckCircle, XCircle, Printer, Clock, Truck } from 'lucide-react';
 import usePedidos from '../../hooks/usePedidos';
+import useSound from '../../hooks/useSound';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
-import { formatCurrency, formatDate } from '../../lib/config';
+import { formatCurrency } from '../../lib/config';
 import { printThermalReceipt } from '../../lib/thermalPrint';
 
 const PedidosTab = ({ api }) => {
-  const { orders, load, updateStatus } = usePedidos(api, 'Pendiente');
+  const { orders, load, updateStatus, confirmAndMove, markAsDispatched } = usePedidos(api, 'Pendiente');
+  const { play } = useSound();
   const [history, setHistory] = useState([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
   const [selected, setSelected] = useState(null);
-  const [selectedHist, setSelectedHist] = useState(null);
-
-  useEffect(() => { load(); }, [load]);
+  const prevOrdersCount = useRef(0);
 
   const fetchHistory = async () => {
-    setLoadingHistory(true);
     try {
-      const data = await api.request('/orders_confirmed?select=*&order=created_at.desc');
+      const data = await api.request('/orders_confirmed?select=*&order=created_at.desc&limit=10');
       setHistory(data || []);
-    } catch (e) {
-      console.error('Error cargando historial', e);
-    } finally {
-      setLoadingHistory(false);
-    }
+    } catch (e) {}
   };
 
   useEffect(() => {
-    fetchHistory();
-  }, [api]);
+    if (orders.length > prevOrdersCount.current) {
+      play();
+    }
+    prevOrdersCount.current = orders.length;
+  }, [orders, play]);
 
-  const handleConfirm = (o) => updateStatus(o.id, { payment_status: 'Confirmado', order_status: 'Pendiente' });
-  const handleReject = (o) => updateStatus(o.id, { payment_status: 'Rechazado' });
+  useEffect(() => { 
+    load(); 
+    fetchHistory();
+  }, [load]);
+
+  const handleConfirm = async (order) => {
+    await confirmAndMove(order);
+    await fetchHistory();
+    setSelected(null);
+  };
+
+  const handleDispatch = async (id) => {
+    await markAsDispatched(id);
+    await fetchHistory();
+    setSelected(null);
+  };
 
   const parseItems = (o) => {
     if (!o) return [];
-    if (typeof o.order_items === 'string') {
-      try { return JSON.parse(o.order_items); } catch (e) { return []; }
+    const items = o.order_items || o.items;
+    if (typeof items === 'string') {
+      try { return JSON.parse(items); } catch (e) { return []; }
     }
-    return o.order_items || [];
+    return Array.isArray(items) ? items : [];
   };
 
-  const handlePrintOrder = (o) => {
-    const items = parseItems(o).map(i => ({ qty: i.qty, name: i.name, price: i.price }));
+  const handlePrint = (order) => {
     printThermalReceipt({
-      title: '--- CALLEJEROS ---',
-      orderNumber: o.id,
-      items,
-      total: o.total_amount || 0,
-      customerName: o.customer_name || '',
-      customerAddress: o.customer_address || '',
-      note: o.observation || '',
-      footer: 'GRACIAS POR PREFERIRNOS'
+      title: 'T! Traigo',
+      orderNumber: order.id,
+      customerName: order.customer_name,
+      customerAddress: order.customer_address,
+      items: parseItems(order),
+      total: order.total_amount,
+      note: order.notes || order.observation
     });
-  };
-
-  const handleDespacho = async (o) => {
-    try {
-      await updateStatus(o.id, { order_status: 'Despachado' }, true);
-      await fetchHistory();
-    } catch (e) {
-      console.error('Error al actualizar estado a despachado', e);
-    }
-  };
-
-  const refreshHistory = async () => {
-    setLoadingHistory(true);
-    try {
-      const data = await api.request('/orders_confirmed?select=*&order=created_at.desc');
-      setHistory(data || []);
-    } catch (e) {
-      console.error('Error actualizando historial', e);
-    } finally {
-      setLoadingHistory(false);
-    }
   };
 
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <h3 className="text-lg font-bold">Domicilios Entrantes</h3>
-        {orders.length === 0 ? <p className="text-slate-400 text-center py-10">No hay pedidos entrantes.</p> :
-        orders.map(o => (
-          <Card key={o.id} className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded text-slate-500">#{String(o.id).slice(0,8)}</span>
-                <span className="text-sm text-slate-500">{formatDate(o.created_at)}</span>
+        <div className="flex justify-between items-center px-2">
+          <h2 className="text-xl font-bold text-white tracking-tight">Pedidos Nuevos</h2>
+          <Badge color="yellow">{orders.length}</Badge>
+        </div>
+        <div className="grid grid-cols-1 gap-4">
+          {orders.map(o => (
+            <Card key={`act-${o.id}`} className="cursor-pointer active:scale-[0.98] transition-transform border-amber-500/30 bg-slate-900" >
+              <div onClick={() => setSelected({ ...o, isNew: true })}>
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h4 className="font-bold text-white text-lg">{o.customer_name || 'Sin Nombre'}</h4>
+                    <p className="text-slate-400 text-sm mt-1">{o.customer_address}</p>
+                  </div>
+                  <h4 className="font-bold text-amber-500 text-xl">{formatCurrency(o.total_amount)}</h4>
+                </div>
+                <div className="flex justify-between items-center pt-3 border-t border-slate-800">
+                  <div className="flex items-center gap-2 text-slate-500 text-xs">
+                    <Clock size={14} /> {new Date(o.created_at).toLocaleTimeString('es-CO')}
+                  </div>
+                  <Badge color="yellow">Por Confirmar</Badge>
+                </div>
               </div>
-              <h4 className="font-bold text-lg">{o.customer_name}</h4>
-              <p className="text-slate-600 text-sm">{o.customer_address}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge color="yellow">Pendiente Pago</Badge>
-                <span className="font-bold text-lg">{formatCurrency(o.total_amount)}</span>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="success" icon={CheckCircle} onClick={() => handleConfirm(o)}>Confirmar</Button>
-              <Button variant="danger" icon={XCircle} onClick={() => handleReject(o)}>Rechazar</Button>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          ))}
+        </div>
       </div>
 
-      <div className="pt-6 border-t">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold">Historial | Pedidos Confirmados</h3>
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={refreshHistory} disabled={loadingHistory}>Actualizar</Button>
-          </div>
+      <div className="space-y-4 pt-4 border-t border-slate-800">
+        <h2 className="text-lg font-bold text-slate-400 px-2 tracking-tight">Últimos 10 Confirmados</h2>
+        <div className="grid grid-cols-1 gap-3">
+          {history.map(h => (
+            <Card key={`hist-${h.id}`} className="cursor-pointer active:scale-[0.98] transition-transform p-4 border-slate-800" >
+              <div onClick={() => setSelected({ ...h, isNew: false })}>
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="font-bold text-slate-300">{h.customer_name}</h4>
+                  <span className="font-bold text-slate-300">{formatCurrency(h.total_amount)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-slate-500">{new Date(h.created_at).toLocaleString('es-CO')}</span>
+                  <Badge color={h.order_status === 'Despachado' ? 'green' : 'gray'}>{h.order_status}</Badge>
+                </div>
+              </div>
+            </Card>
+          ))}
         </div>
-
-        {history.length === 0 ? <p className="text-slate-400 text-center py-10">No hay pedidos Confirmados.</p> :
-        history.map(h => (
-          <Card key={h.id} className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded text-slate-500">#{String(h.id).slice(0,8)}</span>
-                <span className="text-sm text-slate-500">{formatDate(h.created_at)}</span>
-              </div>
-              <h4 className="font-bold text-lg">{h.customer_name}</h4>
-              <p className="text-slate-600 text-sm">{h.customer_address}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge color={h.order_status === 'Despachado' ? 'green' : 'gray'}>{h.order_status || 'Cobrado'}</Badge>
-                <span className="font-bold text-lg">{formatCurrency(h.total_amount)}</span>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setSelectedHist(h)}>Detalle</Button>
-              <Button variant="secondary" icon={Printer} onClick={() => handlePrintOrder(h)}>Imprimir</Button>
-              {h.order_status !== 'Despachado' && (
-                <Button variant="primary" onClick={() => handleDespacho(h)}>Pedido Listo</Button>
-              )}
-            </div>
-          </Card>
-        ))}
       </div>
 
       {selected && (
-        <Modal title={`Pedido ${selected.id}`} onClose={() => setSelected(null)}>
+        <Modal title={`Orden #${String(selected.id).slice(0,8)}`} onClose={() => setSelected(null)}>
           <div className="space-y-4 mb-6">
-            <ul className="divide-y divide-slate-100">
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+              <p className="text-slate-400 text-sm">Cliente: <span className="text-amber-500 font-bold text-lg">{selected.customer_name}</span></p>
+              <p className="text-slate-400 text-sm">Teléfono: <span className="text-white font-bold">{selected.phone || 'N/A'}</span></p>
+              <p className="text-slate-400 text-sm">Dirección: <span className="text-white font-bold">{selected.customer_address}</span></p>
+            </div>
+            <ul className="divide-y divide-slate-800 bg-slate-950 rounded-xl border border-slate-800 px-4">
               {parseItems(selected).map((item, i) => (
-                <li key={i} className="flex justify-between py-2 text-sm">
-                  <span><strong className="text-indigo-600">{item.qty}x</strong> {item.name}</span>
-                  <span>{formatCurrency(item.price * item.qty)}</span>
+                <li key={i} className="flex justify-between py-3 text-sm">
+                  <span className="text-slate-200"><strong className="text-amber-500 mr-2">{item.qty}x</strong> {item.name}</span>
+                  <span className="text-slate-400">{formatCurrency(item.price * item.qty)}</span>
                 </li>
               ))}
             </ul>
-            <div className="flex justify-between pt-4 border-t font-bold text-xl">
-              <span>TOTAL</span>
-              <span className="text-emerald-600">{formatCurrency(selected.total_amount)}</span>
+            <div className="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
+              <span className="text-slate-400 font-bold text-sm">TOTAL</span>
+              <span className="text-amber-500 font-bold text-2xl">{formatCurrency(selected.total_amount)}</span>
             </div>
           </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setSelected(null)}>Cerrar</Button>
-            <Button variant="secondary" onClick={() => { handlePrintOrder(selected); setSelected(null); }}>Imprimir</Button>
-          </div>
-        </Modal>
-      )}
-
-      {selectedHist && (
-        <Modal title={`Pedido ${selectedHist.id}`} onClose={() => setSelectedHist(null)}>
-          <div className="space-y-4 mb-6">
-            <ul className="divide-y divide-slate-100">
-              {parseItems(selectedHist).map((item, i) => (
-                <li key={i} className="flex justify-between py-2 text-sm">
-                  <span><strong className="text-indigo-600">{item.qty}x</strong> {item.name}</span>
-                  <span>{formatCurrency(item.price * item.qty)}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="flex justify-between pt-4 border-t font-bold text-xl">
-              <span>TOTAL</span>
-              <span className="text-emerald-600">{formatCurrency(selectedHist.total_amount)}</span>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setSelectedHist(null)}>Cerrar</Button>
-            <Button variant="secondary" onClick={() => { handlePrintOrder(selectedHist); setSelectedHist(null); }}>Imprimir</Button>
-            {selectedHist.order_status !== 'Despachado' && (
-              <Button variant="primary" onClick={() => { handleDespacho(selectedHist); setSelectedHist(null); }}>Pedir domiciliario</Button>
+          <div className="grid grid-cols-2 gap-3">
+            {selected.isNew ? (
+              <>
+                <Button variant="danger" icon={XCircle} onClick={() => { updateStatus(selected.id, { payment_status: 'Rechazado' }); setSelected(null); }}>Rechazar</Button>
+                <Button variant="success" icon={CheckCircle} onClick={() => handleConfirm(selected)}>Confirmar</Button>
+              </>
+            ) : (
+              selected.order_status !== 'Despachado' && (
+                <Button variant="primary" className="col-span-2" icon={Truck} onClick={() => handleDispatch(selected.id)}>Despachar</Button>
+              )
             )}
+            <Button variant="secondary" icon={Printer} className="col-span-2" onClick={() => { handlePrint(selected); setSelected(null); }}>Imprimir</Button>
           </div>
         </Modal>
       )}

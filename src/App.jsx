@@ -1,82 +1,88 @@
 import React, { useState, useEffect } from 'react';
-import { User, LogOut, Utensils } from 'lucide-react';
+import { LogOut, ShoppingBag, Package, BarChart3, Utensils } from 'lucide-react';
 import useApi from './hooks/useApi';
 import { CONFIG, API_URLS } from './lib/config';
-import CajaView from './views/CajaView';
-import DespachoView from './views/DespachoView';
-import CarteraView from './views/CarteraView';
 import LoginView from './views/LoginView';
+import PedidosTab from './components/tabs/PedidosTab';
+import ProductosTab from './components/tabs/ProductosTab';
+import ContabilidadTab from './components/tabs/ContabilidadTab';
 
 export default function App() {
   const [session, setSession] = useState(null);
-  const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('pedidos');
 
   useEffect(() => {
     const t = localStorage.getItem('sb_token');
-    const r = localStorage.getItem('app_role');
-    if (t && r) { setSession({ access_token: t }); setRole(r); }
+    if (t) setSession({ access_token: t });
   }, []);
 
   const api = useApi(session?.access_token);
 
-  const login = async (email, password, selectedRole) => {
-  setLoading(true);
-  setError(null);
-  try {
-    const res = await fetch(`${API_URLS.AUTH}/token?grant_type=password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': CONFIG.SB_ANON_KEY,
-      },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error_description || "Error de auth");
-
-    localStorage.setItem('sb_token', data.access_token);
-    localStorage.setItem('app_role', selectedRole);
-
-    setSession(data);
-    setRole(selectedRole);
-  } catch (e) {
-    setError(e.message);
-  } finally {
-    setLoading(false);
-  }
-};
+  const login = async (email, password) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_URLS.AUTH}/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': CONFIG.SB_ANON_KEY,
+        },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error_description || 'Error de acceso');
+      
+      setSession(data);
+      localStorage.setItem('sb_token', data.access_token);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const logout = () => {
-    // Eliminar solo las credenciales de sesión, preservar keys como shift_state para mantener datos del turno
-    try {
-      localStorage.removeItem('sb_token');
-      localStorage.removeItem('app_role');
-      // Mantener SHIFT_STATE_KEY deliberadamente para preservar turno abierto/historial
-    } catch (e) {
-      console.error('Error during logout cleanup', e);
-    }
+    localStorage.removeItem('sb_token');
     setSession(null);
-    setRole(null);
   };
 
   if (!session) return <LoginView onLogin={login} loading={loading} error={error} />;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">
-      <header className="bg-white border-b sticky top-0 z-40 shadow-sm no-print">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
-          <div className="flex items-center gap-3"><div className="bg-indigo-600 p-1.5 rounded text-white"><Utensils size={20}/></div><span className="font-bold text-xl hidden sm:block">Comida Rápida</span><span className="bg-slate-100 text-xs px-2 py-1 rounded uppercase font-bold">{role}</span></div>
-          <div className="flex gap-4 items-center"><span className="hidden sm:flex gap-2 text-sm text-slate-500"><User size={16}/> {session.user?.email}</span><button onClick={logout} className="text-slate-400 hover:text-red-500"><LogOut size={20}/></button></div>
+    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans pb-20">
+      <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 p-4 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <div className="bg-amber-500 p-2 rounded-lg text-slate-900"><Utensils size={20}/></div>
+          <span className="font-bold text-xl text-white tracking-tight">T! Traigo</span>
         </div>
+        <button onClick={logout} className="p-2 text-slate-400 hover:text-amber-500 bg-slate-800 rounded-lg">
+          <LogOut size={20}/>
+        </button>
       </header>
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {role === 'caja' && <CajaView api={api} token={session.access_token} />}
-        {role === 'despacho' && <DespachoView api={api} />}
-        {role === 'cartera' && <CarteraView api={api} />}
+
+      <main className="p-4 max-w-lg mx-auto">
+        {activeTab === 'pedidos' && <PedidosTab api={api} />}
+        {activeTab === 'productos' && <ProductosTab api={api} token={session.access_token} />}
+        {activeTab === 'contabilidad' && <ContabilidadTab api={api} />}
       </main>
+
+      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 flex justify-around p-2 z-50 pb-safe">
+        <button onClick={() => setActiveTab('pedidos')} className={`flex flex-col items-center p-3 rounded-xl ${activeTab === 'pedidos' ? 'text-amber-500 bg-slate-800' : 'text-slate-500'}`}>
+          <ShoppingBag size={24} />
+          <span className="text-[10px] font-bold mt-1">Pedidos</span>
+        </button>
+        <button onClick={() => setActiveTab('productos')} className={`flex flex-col items-center p-3 rounded-xl ${activeTab === 'productos' ? 'text-amber-500 bg-slate-800' : 'text-slate-500'}`}>
+          <Package size={24} />
+          <span className="text-[10px] font-bold mt-1">Productos</span>
+        </button>
+        <button onClick={() => setActiveTab('contabilidad')} className={`flex flex-col items-center p-3 rounded-xl ${activeTab === 'contabilidad' ? 'text-amber-500 bg-slate-800' : 'text-slate-500'}`}>
+          <BarChart3 size={24} />
+          <span className="text-[10px] font-bold mt-1">Balance</span>
+        </button>
+      </nav>
     </div>
   );
 }
