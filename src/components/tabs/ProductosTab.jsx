@@ -88,6 +88,22 @@ const ProductosTab = ({ api, token }) => {
               <input name="stock" type="number" defaultValue={editing?.stock} placeholder="Stock" required className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-amber-500 outline-none"/>
             </div>
             <textarea name="description" defaultValue={editing?.description} placeholder="Descripción breve" className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-amber-500 outline-none h-24"/>
+            
+            <div className="grid grid-cols-1 gap-2 p-4 bg-slate-950 rounded-xl border border-slate-800">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input type="checkbox" name="featured" defaultChecked={!!editing?.featured} className="w-5 h-5 rounded border-slate-800 bg-slate-900 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-950"/>
+                <span className="text-sm font-bold text-slate-400 group-hover:text-white uppercase tracking-wider">Destacado</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input type="checkbox" name="isOffer" defaultChecked={!!editing?.isOffer} className="w-5 h-5 rounded border-slate-800 bg-slate-900 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-950"/>
+                <span className="text-sm font-bold text-slate-400 group-hover:text-white uppercase tracking-wider">En Oferta</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input type="checkbox" name="bestSeller" defaultChecked={!!editing?.bestSeller} className="w-5 h-5 rounded border-slate-800 bg-slate-900 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-950"/>
+                <span className="text-sm font-bold text-slate-400 group-hover:text-white uppercase tracking-wider">Más Vendido</span>
+              </label>
+            </div>
+
             <div className="space-y-2 p-4 bg-slate-950 rounded-xl border border-slate-800">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Subir Imágenes</label>
               <input ref={fileInputRef} type="file" name="imageFiles" multiple accept="image/*" className="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-slate-800 file:text-amber-500 hover:file:bg-slate-700"/>
