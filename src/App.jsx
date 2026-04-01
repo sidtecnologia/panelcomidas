@@ -56,7 +56,7 @@ export default function App() {
       <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 p-4 flex justify-between items-center">
         <div className="flex items-center gap-3">
           <img src="/favicon.png" alt="Logo" className="w-10 h-10 object-contain" />
-          <span className="font-bold text-xl text-white tracking-tight">Panel Comidas</span>
+          <span className="font-bold text-xl text-white tracking-tight">Panel Administrativo</span>
         </div>
         <button onClick={logout} className="p-2 text-slate-400 hover:text-amber-500 bg-slate-800 rounded-lg">
           <LogOut size={20}/>

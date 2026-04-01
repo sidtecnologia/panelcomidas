@@ -15,8 +15,8 @@ const LoginView = ({ onLogin, loading, error }) => {
           <div className="w-24 h-24 flex items-center justify-center mx-auto mb-4">
             <img src="/favicon.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">T! Traigo</h1>
-          <p className="text-slate-400 mt-2 text-sm">Panel Administrativo</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Panel Administrativo</h1>
+          <p className="text-slate-400 mt-2 text-sm">T! Traigo Menú</p>
         </div>
         {error && <div className="bg-red-950 border border-red-900 text-red-400 p-4 rounded-xl text-sm mb-6 flex items-center gap-2"><XCircle size={18}/> {error}</div>}
         <form onSubmit={(e) => { e.preventDefault(); onLogin(email, pass); }} className="space-y-5">
